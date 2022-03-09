@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>user click Test</title>
+        <meta charset="utf-8" />
+        <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+        <script type="text/javascript">
+            var points = [];
+            var roomCode = '';
+            var lineColour = '#000000';
+            AFRAME.registerComponent('start',{
+                init: function(){
+                    this.canvas = document.getElementById('canvas');
+                    this.canvas.addEventListener('updateCanvas', function()
+                    {
+                        var width = document.getElementById('canvas').width;
+                        var height = document.getElementById('canvas').height;
+                        
+                        this.canvas = document.getElementById('canvas');
+                        this.ctx = canvas.getContext("2d");
+                        console.log("somethig should be happening!");
+                        this.ctx.lineJoin = 'round';
+                        this.ctx.lineCap = 'round';
+                        this.ctx.strokeStyle = lineColour;
+                        this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        this.ctx.fillStyle = '#ffffff';
+                        this.ctx.fillRect(0, 0, canvas.width, canvas.height);
+                        var p = points;
+                        for (var i = 0; i < p.length; i++)
+                        {
+                            this.ctx.beginPath();
+                            this.ctx.lineWidth = (canvas.width * p[i]['lineWidth']);
+                            if (p[i]['drawingTool'] == 'eraser')
+                            {
+                                this.ctx.strokeStyle = '#ffffff';
+                            }
+                            else
+                            {
+                                this.ctx.strokeStyle = p[i]['colour'];
+                            }
+                            this.ctx.moveTo(canvas.width * p[i]['initial_pos'][0], canvas.height * p[i]['initial_pos'][1]);
+                            if (p[i]['others_pos'].length)
+                            {
+                                var sub_p = p[i]['others_pos'];
+                                for (var j = 0; j < sub_p.length; j++)
+                                {
+                                    this.ctx.lineTo(canvas.width * sub_p[j][0], canvas.height * sub_p[j][1]);
+                                }
+                                this.ctx.stroke();
+                            }
+                        }
+                    });
+                }
+            });
+        </script>
+    </head>
+
+    <body>
+        <!-- our buttond to tell others -->
+        <!-- <button id="red" style="background-color:rgb(255, 0, 0); color:rgb(255, 255, 255)">RED</button>
+        <button id="blue" style="background-color:rgb(0, 0, 255); color:rgb(255, 255, 255)">BLUE</button> -->
+
+        <a-scene background="color:rgb(0, 0, 0);" start>
+            <a-assets>
+                <canvas id="canvas"></canvas>
+            </a-assets>
+            <a-entity camera wasd-controls look-controls position="0 2.6 0">
+                <a-entity cursor="rayOrigin:mouse;" raycaster="far:20; interval:200; objects:.interactive"></a-entity>
+            </a-entity>
+
+            <a-entity class="ground"  geometry="primitive:plane; width:14; height:14;" material="src:#canvas" position="0 0.01 0" rotation="-90 0 0"></a-entity>
+        </a-scene>
+
+        <!-- this is magic code created when the node server runs -->
+        <!-- putting at teh bottom of body to let body load first before we try to query for elements -->
+        <!-- //VERY HANDY! https://socket.io/docs/v3/emit-cheatsheet/  -->
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+            const socket = io();
+
+            socket.on('connect', (userData) => {
+                console.log('I exist!');
+                socket.emit('expectatorNeedsInfo', JSON.stringify({}));
+            });
+
+            //listen to event from server
+            socket.on('returningGameInfo', (data) => {
+                console.log('Connected.');
+            });
+            socket.on('startDrawing', (data) => {
+                points = [];
+                document.getElementById('canvas').dispatchEvent(new Event('updateCanvas'));
+                document.getElementsByClassName('ground')[0].setAttribute('material', {src: ''});
+                document.getElementsByClassName('ground')[0].setAttribute('material', {src: '#canvas'});
+            });
+            socket.on('drawing', (data) => {
+                points = data['draw']['points'];
+                document.getElementById('canvas').dispatchEvent(new Event('updateCanvas'));
+                document.getElementsByClassName('ground')[0].setAttribute('material', {src: ''});
+                document.getElementsByClassName('ground')[0].setAttribute('material', {src: '#canvas'});
+            });
+        </script>
+    </body>
+</html>
